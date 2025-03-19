@@ -1,0 +1,157 @@
+import cv2
+import time
+import numpy as np
+import math
+import pyautogui
+import HandTrakModule as htm
+
+wCam, hCam = 640, 480
+frameR = 200
+smoothening = 3
+scroll_sensitivity = 2
+middle_y = hCam//2
+
+cap = cv2.VideoCapture(0)
+cap.set(3, wCam)
+cap.set(4, hCam)
+
+pTime = 0
+
+detector = htm.handDetector(detectionCon=0.8, modelComp=1)
+
+screen_width, screen_height = pyautogui.size()
+
+prev_x, prev_y = 0, 0
+prev_scroll_y = 0
+gesture_mode = None
+click_hold_active = False
+
+center_line = hCam // 2
+
+click_hold_act = False
+hold_start_time = None
+hold_threshold = 1.0
+
+swipe_start_y = None
+swipe_threshold = 70
+swipe_active = False
+
+swipe_start_x = None
+swipe_threshold_horizontal = 20
+swipe_active_h = False
+
+while True:
+    success, img = cap.read()
+    img = cv2.flip(img, 1)
+
+    img = detector.findHands(img)
+    lmList = detector.findPosition(img, draw=False)
+
+
+    if len(lmList) != 0:
+
+        x_mid, y_mid = lmList[11][1], lmList[11][2]
+        fingers = []
+        for tip in [8, 12, 16, 20]:
+            if lmList[tip][2] < lmList[tip - 2][2]:
+                fingers.append(1)
+            else:
+                fingers.append(0)
+
+        total_fingers = fingers.count(1)
+
+        if total_fingers == 4 and all(fingers[:4]):
+            gesture_mode = "four_finger_swipe"
+            mid_x = lmList[12][1]
+
+            if swipe_start_x is None:
+                swipe_start_x = mid_x
+
+            horizontal_movement = mid_x - swipe_start_x
+            if abs(horizontal_movement) > swipe_threshold_horizontal:
+                if horizontal_movement < 0 and not swipe_active_h:
+                    pyautogui.hotkey("alt", "shift", "tab")
+                    swipe_active_h = True
+                    swipe_start_x = mid_x
+                elif horizontal_movement > 0 and not swipe_active_h:
+                    pyautogui.hotkey("alt", "tab")
+                    swipe_active_h= True
+                    swipe_start_x = mid_x
+        else:
+            swipe_start_x = None
+            swipe_active_h = False
+
+        if total_fingers == 3 and fingers[0] == 1 and fingers[1] == 1 and fingers[2] == 1:
+            gesture_mode = "three_finger_swipe"
+            mid_y = lmList[12][2]
+
+            if swipe_start_y is None:
+                swipe_start_y = mid_y
+
+            vertical_movement = mid_y - swipe_start_y
+            if abs(vertical_movement) > swipe_threshold:
+                if vertical_movement < 0 and not swipe_active:
+                    pyautogui.hotkey("win", "tab")
+                    swipe_active = True
+                    swipe_start_y = mid_y
+                elif vertical_movement > 0 and not swipe_active:
+                    pyautogui.hotkey("win", "down")
+                    swipe_active = True
+                    swipe_start_y = mid_y
+        else:
+            swipe_start_y = None
+            swipe_active = False
+
+
+        if total_fingers == 1 and fingers[0] == 1:
+            gesture_mode = "cursor_control"
+            x1, y1 = lmList[8][1], lmList[8][2]
+            screen_x = np.interp(x1, (frameR, wCam - frameR), (0, screen_width))
+            screen_y = np.interp(y1, (frameR, hCam - frameR), (0, screen_height))
+
+            curr_x = prev_x + (screen_x - prev_x) / smoothening
+            curr_y = prev_y + (screen_y - prev_y) / smoothening
+
+            pyautogui.moveTo(curr_x, curr_y)
+            prev_x, prev_y = curr_x, curr_y
+
+            thumb_x, thumb_y = lmList[4][1], lmList[4][2]
+            length = math.hypot(thumb_x - x_mid, thumb_y - y_mid)
+            if length < 20:
+                if not click_hold_active:
+                    if hold_start_time is None:
+                        hold_start_time = time.time()
+                        pyautogui.click()
+                    elif time.time() - hold_start_time > hold_threshold:
+                        pyautogui.mouseDown()
+                        click_hold_active = True
+                else:
+                    hold_start_time = None
+            else:
+                if click_hold_active:
+                    pyautogui.mouseUp()
+                    click_hold_active = False
+
+        elif total_fingers == 2 and fingers[0] == 1 and fingers[1] == 1:
+            gesture_mode = "scroll_mode"
+            y1 = lmList[8][2]
+            scroll_distance = y1 - middle_y
+
+            max_scroll = 100
+            scroll_distance = np.clip(scroll_distance, -max_scroll, max_scroll)
+
+            if abs(scroll_distance) > 5:
+                pyautogui.scroll(int(-scroll_distance * scroll_sensitivity))
+
+        else:
+            gesture_mode = None
+
+    cv2.putText(img, f"Mode: {gesture_mode}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
+
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
+    pTime = cTime
+    cv2.putText(img, f"FPS: {int(fps)}", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
+
+    cv2.imshow("Image", img)
+    cv2.waitKey(1)
