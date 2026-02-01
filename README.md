@@ -2,6 +2,8 @@
 
 This project allows you to control your computer's cursor, clicks, scrolling, and system commands using hand gestures captured through your webcam. It uses computer vision to create a virtual mouse, providing a touchless way to interact with your PC.
 
+https://github.com/user-attachments/assets/10b07bb5-8519-4f2c-a3b3-8728f2fdaf1c
+
 ## Features
 
 The application recognizes a variety of hand gestures to perform different actions:
@@ -81,5 +83,5 @@ You can fine-tune the application's behavior by modifying the variables at the t
 -   `swipe_threshold` / `swipe_threshold_horizontal`: The distance your hand needs to travel to trigger a swipe action.
 
 -   
-https://github.com/user-attachments/assets/d4d1c763-fca4-451c-8e71-1521d8c345df
+
 
