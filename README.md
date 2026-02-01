@@ -79,3 +79,7 @@ You can fine-tune the application's behavior by modifying the variables at the t
 -   `frameR`: The "reduction" of the frame size for mapping hand movement to the screen. Adjust this to change cursor sensitivity.
 -   `scroll_sensitivity`: Increases or decreases the speed of vertical scrolling.
 -   `swipe_threshold` / `swipe_threshold_horizontal`: The distance your hand needs to travel to trigger a swipe action.
+
+-   
+https://github.com/user-attachments/assets/d4d1c763-fca4-451c-8e71-1521d8c345df
+
